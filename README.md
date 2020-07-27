@@ -17,7 +17,7 @@ npm i EventDispatcher
 ## Basic Usage
 
 ```js
-import {EventDispatcher} from 'EventDispatcher';
+import { EventDispatcher } from 'EventDispatcher';
 
 /*
 |---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ ed.trigger(['click','touch'], ['arg1', 'arg2']);
 
 /*
 |---------------------------------------------------------------------------
-| Trigger events
+| Remove events
 |---------------------------------------------------------------------------
 | Remove the event by calling the `remove` method.  
 |
