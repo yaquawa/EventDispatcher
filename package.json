@@ -1,0 +1,56 @@
+{
+  "name": "EventDispatcher",
+  "version": "1.0.0",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yaquawa/EventDispatcher/issues"
+  },
+  "homepage": "https://github.com/yaquawa/EventDispatcher#readme",
+  "keywords": [
+    "EventEmitter",
+    "Events",
+    "emit",
+    "emitter",
+    "event",
+    "pub/sub",
+    "publish",
+    "reactor",
+    "subscribe"
+  ],
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "tsdx watch --entry src/EventDispatcher.ts",
+    "build": "tsdx build --entry src/EventDispatcher.ts",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build --entry src/EventDispatcher.ts"
+  },
+  "peerDependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "author": "yaquawa",
+  "module": "dist/mylib.esm.js",
+  "devDependencies": {
+    "husky": "^4.2.5",
+    "tsdx": "^0.13.2",
+    "tslib": "^2.0.0",
+    "typescript": "^3.9.7"
+  }
+}
