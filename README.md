@@ -43,7 +43,7 @@ const ed = new EventDispatcher(myEventTypes);
 */
 
 // Register an event handler.
-ed.on('click touch', function (arg1, arg2, event) {
+ed.on('click', function (event) {
     console.log(event.type);
 });
 
@@ -51,6 +51,7 @@ ed.on('click touch', function (arg1, arg2, event) {
 const touchEventHandler = () => {
     console.log('touched!');
 };
+
 ed.one('touch', touchEventHandler);
 
 
@@ -59,15 +60,20 @@ ed.one('touch', touchEventHandler);
 |---------------------------------------------------------------------------
 | Trigger events
 |---------------------------------------------------------------------------
-| Trigger one or more events by calling the `trigger` method. 
+| Trigger any events by calling the `trigger` method. 
 |
 */
 
-// Trigger an event  
-ed.trigger('click', ['arg1', 'arg2']);
+// Trigger an event with event object
+const eventObject = {
+    'arg1': 'foo',
+    'arg2': 'bar'
+};
 
-// Trigger multiple events
-ed.trigger(['click','touch'], ['arg1', 'arg2']);
+ed.trigger('click', eventObject);
+
+// without event object
+ed.trigger('touch');
 
 
 
@@ -95,8 +101,8 @@ ed.off('touch', touchEventHandler);
 | the `enable()` and `disable()` methods.
 |
 */
-ed.disable().trigger(['move','touch']); // nothing got triggered
-ed.enable().trigger('move'); // enable it again, now it triggers the callbacks
+ed.disable().trigger('click'); // nothing got triggered
+ed.enable().trigger('click'); // enable it again, now it triggers the callbacks
 
 
 
@@ -119,10 +125,25 @@ ed.trigger('foo')
 
 
 ## Use it as a mixin
-You can mixin the APIs into another class via calling the `mixin` method of the EventDispatcher instance.
+You can mixin the APIs into another class by extending the API class.
 
 ```js
-class Foo extends ed.mixin(BaseClass) {
+class Foo extends ed.Api() {
+
+}
+
+const foo = new Foo;
+
+foo.trigger('click');
+```
+
+If you have a base class already, I would recommend you to use [ts-mixer](https://github.com/tannerntannern/ts-mixer) to make it possible.   
+In that case your code would be: 
+
+```js
+import { Mixin } from 'ts-mixer';
+
+class Foo extends Mixin(BaseClass,ed.Api()) {
 
 }
 
@@ -136,26 +157,38 @@ foo.trigger('click');
 Leverage TypeScript for strict typing and compilation by giving an event interface.
 
 ```ts
+import {EventDispatcher, Event} from 'EventDispatcher';
+
 interface Events {
-    sentResponse(response: string): void
-    getPostTitle(title: string, post: object): void | string
+  click(event: MouseEvent): void
+  touch(event: Event): boolean
 }
 
-const ed = new EventDispatcher<Events>(['sentResponse', 'getPostTitle']);
+class MouseEvent extends Event {
+  public timeStamp: number
+
+  constructor(type: string) {
+    super(type);
+    this.timeStamp = (new Date).getTime();
+  }
+}
+
+const ed = new EventDispatcher<Events>(['click', 'touch']);
 
 ed.on('foo',() => {}) // error
 ed.off('foo',() => {}) // error
-ed.trigger('foo',() => {}) // error
+ed.trigger('foo') // error
 ed.on('click',() => {}) // OK
 ed.off('click',() => {}) // OK
 ed.trigger('click') // OK
 
-ed.on('getPostTitle',() => 10) // error
-ed.on('getPostTitle',() => '10') // OK
+ed.on('touch',() => 10) // error
+ed.on('touch',() => true) // OK
 
-ed.trigger('getPostTitle',10) // error
-ed.trigger('getPostTitle','10',{}) // OK
+ed.trigger('touch',10) // error
+ed.trigger('touch',{foo:'bar'}) // OK
+ed.trigger(new MouseEvent('click')) // OK
 ```
 
 ## API
-For more information just take a look at the test file.
+For more information just take a look at the [test file](https://github.com/yaquawa/EventDispatcher/blob/master/tests/EventDispatcher.test.ts).

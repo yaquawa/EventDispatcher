@@ -1,41 +1,61 @@
-import { EventDispatcher, AnyEvents } from '../src/EventDispatcher';
+import { EventDispatcher, Event } from '../src/EventDispatcher';
+import { Mixin } from 'ts-mixer';
 
-interface Events {
-  click: (...args: any[]) => any;
-  touch: (...args: any[]) => any;
+class MouseEvent extends Event {
+  public timeStamp: number;
 
-  sentResponse(response: string): void;
-
-  getPostTitle(title: string, post: object): void | string;
+  constructor(type: string) {
+    super(type);
+    this.timeStamp = new Date().getTime();
+  }
 }
 
-const ed = new EventDispatcher<Events>([
-  'click',
-  'touch',
-  'sentResponse',
-  'getPostTitle',
-]);
+interface Events {
+  // [eventType: string]: (event: EventX) => any
+  click(event: MouseEvent): void;
+
+  touch(event: MouseEvent): boolean;
+}
+
+let ed: EventDispatcher<Events>;
+
+beforeEach(() => {
+  ed = new EventDispatcher<Events>([
+    'click',
+    'touch',
+    'sentResponse',
+    'getPostTitle',
+  ]);
+});
 
 test('register and trigger event', () => {
-  const argsPassed = ['arg1', 'arg2'];
+  const args = { arg1: 'foo', arg2: 'bar' };
   const callback = jest.fn();
 
   ed.on('click', callback)
     .on('touch', callback)
     .one('touch', callback);
 
-  ed.trigger('click', ...argsPassed);
-  expect(callback).nthCalledWith(1, ...[...argsPassed, { type: 'click' }]);
+  ed.trigger('click', args);
+  expect(callback).nthCalledWith(1, { type: 'click', ...args });
 
-  ed.trigger('touch', ...argsPassed);
-  expect(callback).nthCalledWith(2, ...[...argsPassed, { type: 'touch' }]);
-  expect(callback).nthCalledWith(3, ...[...argsPassed, { type: 'touch' }]);
+  ed.trigger('touch', args);
+  expect(callback).nthCalledWith(2, { type: 'touch', ...args });
+  expect(callback).nthCalledWith(3, { type: 'touch', ...args });
 
-  ed.trigger(['touch', 'click'], ...argsPassed);
-  expect(callback).nthCalledWith(4, ...[...argsPassed, { type: 'touch' }]);
-  expect(callback).nthCalledWith(5, ...[...argsPassed, { type: 'click' }]);
+  expect(callback).toBeCalledTimes(3);
+});
 
-  expect(callback).toBeCalledTimes(5);
+test('trigger method return response array', () => {
+  ed.on('touch', () => {
+    return true;
+  }).on('touch', () => {
+    return false;
+  });
+
+  const responses = ed.trigger('touch');
+
+  expect(responses).toEqual([true, false]);
 });
 
 test('register event with regular expression', () => {
@@ -140,19 +160,18 @@ test('set callback context', () => {
 test('mixin to another class', () => {
   class BaseClass {}
 
-  const response = 'hello world!';
+  const response = { foo: 'foobar' };
 
-  for (let Api of [ed.mixin(BaseClass)]) {
-    let MixedClass = class extends Api {
-      listenSentResponse() {
-        this.on('sentResponse', (res: string) => {
-          expect(res).toEqual(response);
-        });
-      }
-    };
-
-    let mixedObj = new MixedClass();
-    mixedObj.listenSentResponse();
-    mixedObj.trigger('sentResponse', response);
+  class MixedClass extends Mixin(BaseClass, ed.Api()) {
+    listenSentResponse() {
+      this.on('touch', e => {
+        expect(e).toEqual({ ...response, type: 'touch' });
+        return false;
+      });
+    }
   }
+
+  const mixedObj = new MixedClass();
+  mixedObj.listenSentResponse();
+  mixedObj.trigger('touch', response);
 });

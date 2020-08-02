@@ -1,20 +1,21 @@
 import { isRegexp, isArray } from './TypeGuards';
+import { Event } from './Event';
 
 interface EventsMap {
-  [event: string]: any;
+  [eventType: string]: any;
 }
 
-interface AnyEvents {
-  [event: string]: (...args: any[]) => any;
+interface DefaultEventsMap<E extends Event = Event> {
+  [eventType: string]: (event: E) => any;
 }
 
-type Constructor<T = {}> = new (...args: any[]) => T;
+type Keys<T> = Extract<keyof T, string>;
 
 function asArray(value: any): any[] {
   return isArray(value) ? value : [value];
 }
 
-class EventDispatcher<Events extends EventsMap = AnyEvents> {
+class EventDispatcher<Events extends EventsMap = DefaultEventsMap> {
   private readonly validEvents: (string | RegExp)[];
   private callbacks: Partial<{ [E in keyof Events]: Events[E][] }>;
   private disabled: boolean;
@@ -50,17 +51,18 @@ class EventDispatcher<Events extends EventsMap = AnyEvents> {
    * @param fn
    * The callback function to be bound.
    */
-  on<EventType extends keyof Events>(
-    eventType: EventType | EventType[],
+  on<EventType extends Keys<Events>>(
+    eventType: EventType,
     fn: Events[EventType]
   ): this {
-    this.forEachEventType(eventType, (type: keyof Events) => {
-      // Add fn to callback list
-      if (!this.hasCallbacks(type as string)) {
-        this.callbacks[type] = [];
-      }
-      this.callbacks[type]!.push(fn);
-    });
+    this.validateEventType(eventType);
+
+    // Add fn to callback list
+    if (!this.hasCallbacks(eventType)) {
+      this.callbacks[eventType] = [];
+    }
+
+    this.callbacks[eventType]!.push(fn);
 
     return this;
   }
@@ -75,31 +77,31 @@ class EventDispatcher<Events extends EventsMap = AnyEvents> {
    * The callback function to be removed.
    * If not provided, all callback functions of the given event type(s) get removed.
    */
-  off<EventType extends keyof Events>(
-    eventType: EventType | EventType[],
+  off<EventType extends Keys<Events>>(
+    eventType: EventType,
     fn?: Events[EventType]
   ): this {
-    this.forEachEventType(eventType, (type: keyof Events) => {
-      // Error handling
-      if (!this.hasCallbacks(type as string)) {
-        return;
-      }
+    this.validateEventType(eventType);
 
-      // Delete all related callbacks if `fn` not specified
-      if (!fn) {
-        delete this.callbacks[type];
-        return;
-      }
+    // Error handling
+    if (!this.hasCallbacks(eventType)) {
+      return this;
+    }
 
-      // Otherwise delete only the `fn` from callback list
-      const callbacks = this.callbacks[type];
-      let i = callbacks!.length;
-      while (i--) {
-        if (callbacks![i] === fn) {
-          this.callbacks[type]!.splice(i, 1);
-        }
+    // Delete all related callbacks if `fn` not specified
+    if (!fn) {
+      delete this.callbacks[eventType];
+      return this;
+    }
+
+    // Otherwise delete only the `fn` from callback list
+    const callbacks = this.callbacks[eventType];
+    let i = callbacks!.length;
+    while (i--) {
+      if (callbacks![i] === fn) {
+        this.callbacks[eventType]!.splice(i, 1);
       }
-    });
+    }
 
     return this;
   }
@@ -107,54 +109,56 @@ class EventDispatcher<Events extends EventsMap = AnyEvents> {
   /**
    * Similar to `this.on` Define a one time event.
    */
-  one<EventType extends keyof Events>(
-    eventType: EventType | EventType[],
+  one<EventType extends Keys<Events>>(
+    eventType: EventType,
     fn: Events[EventType]
   ): this {
-    this.forEachEventType(eventType, (type: keyof Events) => {
-      const callback = (...args: any[]) => {
-        this.off(type, callback as Events[EventType]);
-        return fn.apply(this.callbackContext || this, args);
-      };
+    this.validateEventType(eventType);
 
-      this.on(type, callback as Events[EventType]);
-    });
+    const callback = (eventObject: Event) => {
+      this.off(eventType, callback as Events[EventType]);
+      return fn.call(this.callbackContext || this, eventObject);
+    };
+
+    this.on(eventType, callback as Events[EventType]);
 
     return this;
   }
 
   /**
    * Trigger the given event(s).
-   * @param eventType
-   * One or more event types.
-   *
-   * @param args
    * The arguments passed to the callback function.
    */
-  trigger<EventType extends keyof Events>(
-    eventType: EventType | EventType[],
-    ...args: Parameters<Events[EventType]>
-  ): this {
-    if (this.disabled) {
-      return this;
+  trigger<EventObject extends Event>(
+    eventObject: EventObject
+  ): ReturnType<Events[keyof Events]>[] | null;
+  trigger<EventType extends Keys<Events>>(
+    eventType: EventType,
+    args?: Record<string, any>
+  ): ReturnType<Events[EventType]>[] | null;
+  trigger(eventTypeOrEventObject: any, args?: any): any {
+    const eventObject =
+      eventTypeOrEventObject instanceof Event
+        ? eventTypeOrEventObject
+        : new Event(eventTypeOrEventObject, { properties: args || {} });
+    const eventType =
+      eventTypeOrEventObject instanceof Event
+        ? eventTypeOrEventObject.type
+        : eventTypeOrEventObject;
+
+    this.validateEventType(eventType);
+
+    if (this.disabled || !this.hasCallbacks(eventType)) {
+      return null;
     }
 
-    // args = assert.array(args);
+    const callbacks = this.callbacksForEvent(eventType);
 
-    this.forEachEventType(eventType, (type: keyof Events) => {
-      if (!this.hasCallbacks(type as string)) {
-        return;
-      }
-
-      const callbacks = this.callbacksForEvent(type),
-        eventObject = { type: type };
-
-      callbacks!.forEach(callback => {
-        callback.apply(this.callbackContext || this, args.concat(eventObject));
-      });
+    const responses = callbacks!.map(callback => {
+      return callback.call(this.callbackContext || this, eventObject);
     });
 
-    return this;
+    return responses;
   }
 
   /**
@@ -190,30 +194,13 @@ class EventDispatcher<Events extends EventsMap = AnyEvents> {
   }
 
   /**
-   * Iterate the given events with validation.
-   */
-  private forEachEventType<EventType extends keyof Events>(
-    eventType: EventType | EventType[],
-    callback: (type: keyof Events) => void
-  ): void {
-    const eventTypes = asArray(eventType);
-
-    this.validateEventType(eventTypes);
-
-    eventTypes.forEach((type: keyof Events) => {
-      callback.call(this, type);
-    });
-  }
-
-  /**
    * Throw an error if the given event type(s) is not valid.
    */
   private validateEventType(eventType: string | string[]): void {
     if (!this.isValidEvent(eventType)) {
+      const validEvents = this.validEvents.join('|');
       throw new Error(
-        `Invalid Event Type: '${eventType}'.\nEvent type should be any of: ${this.validEvents.join(
-          '|'
-        )}.`
+        `Invalid Event Type: '${eventType}'.\nEvent type should be any of: ${validEvents}.`
       );
     }
   }
@@ -248,42 +235,53 @@ class EventDispatcher<Events extends EventsMap = AnyEvents> {
     return false;
   }
 
-  mixin<T extends Constructor>(BaseClass: T) {
+  Api() {
     const ed = this;
 
-    return class extends BaseClass {
+    return class {
       eventDispatcher: EventDispatcher<Events>;
 
-      constructor(...args: any[]) {
-        super(...args);
+      constructor() {
         this.eventDispatcher = ed;
       }
 
-      on<EventType extends keyof Events>(
-        eventType: EventType | EventType[],
+      on<EventType extends Keys<Events>>(
+        eventType: EventType,
         fn: Events[EventType]
       ): this {
         this.eventDispatcher.on(eventType, fn);
         return this;
       }
 
-      off<EventType extends keyof Events>(
-        eventType: EventType | EventType[],
+      off<EventType extends Keys<Events>>(
+        eventType: EventType,
         fn?: Events[EventType]
       ): this {
         ed.off(eventType, fn);
         return this;
       }
 
-      trigger<EventType extends keyof Events>(
-        eventType: EventType | EventType[],
-        ...args: Parameters<Events[EventType]>
+      one<EventType extends Keys<Events>>(
+        eventType: EventType,
+        fn: Events[EventType]
       ): this {
-        ed.trigger(eventType, ...args);
+        ed.one(eventType, fn);
+        return this;
+      }
+
+      trigger<EventObject extends Event>(
+        eventObject: EventObject
+      ): ReturnType<Events[keyof Events]>[] | null;
+      trigger<EventType extends Keys<Events>>(
+        eventType: EventType,
+        args?: Record<string, any>
+      ): ReturnType<Events[EventType]>[] | null;
+      trigger(eventTypeOrEventObject: any, args?: any): any {
+        ed.trigger(eventTypeOrEventObject, args);
         return this;
       }
     };
   }
 }
 
-export { EventDispatcher, AnyEvents };
+export { EventDispatcher, DefaultEventsMap, Event };
