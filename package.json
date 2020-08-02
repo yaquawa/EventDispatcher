@@ -1,6 +1,6 @@
 {
   "name": "EventDispatcher",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/yaquawa/EventDispatcher/issues"
