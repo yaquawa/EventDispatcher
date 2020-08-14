@@ -1,5 +1,5 @@
 import { isRegexp, isArray } from './TypeGuards';
-import { Event } from './Event';
+import { Event, EventInit } from './Event';
 
 interface EventsMap {
   [eventType: string]: any;
@@ -284,4 +284,4 @@ class EventDispatcher<Events extends EventsMap = DefaultEventsMap> {
   }
 }
 
-export { EventDispatcher, DefaultEventsMap, Event };
+export { EventDispatcher, DefaultEventsMap, Event, EventInit };

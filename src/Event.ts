@@ -22,4 +22,4 @@ class Event {
   }
 }
 
-export { Event };
+export { Event, EventInit };
