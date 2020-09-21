@@ -46,7 +46,7 @@
     "trailingComma": "es5"
   },
   "author": "yaquawa",
-  "module": "dist/mylib.esm.js",
+  "module": "dist/eventdispatcher.esm.js",
   "devDependencies": {
     "husky": "^4.2.5",
     "ts-mixer": "^5.3.0",
