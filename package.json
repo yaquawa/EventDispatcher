@@ -1,7 +1,8 @@
 {
   "name": "EventDispatcher",
-  "version": "2.0.1",
+  "version": "2.1.1",
   "license": "MIT",
+  "author": "yaquawa",
   "bugs": {
     "url": "https://github.com/yaquawa/EventDispatcher/issues"
   },
@@ -18,40 +19,33 @@
     "subscribe"
   ],
   "main": "dist/index.js",
-  "typings": "dist/EventDispatcher.d.ts",
+  "module": "dist/index.mjs",
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.js"
+  },
+  "typings": "dist/index.d.ts",
   "files": [
     "dist",
     "src"
   ],
   "engines": {
-    "node": ">=10"
+    "node": ">=14"
   },
   "scripts": {
-    "start": "tsdx watch --entry src/EventDispatcher.ts",
-    "build": "tsdx build --entry src/EventDispatcher.ts",
-    "test": "tsdx test",
-    "lint": "tsdx lint",
-    "prepare": "tsdx build --entry src/EventDispatcher.ts"
+    "dev": "npm run build -- --watch",
+    "build": "rm -rf dist && tsup src/index.ts --sourcemap --dts --format cjs,esm",
+    "prepublishOnly": "npm run build",
+    "release": "npx git-ensure -a && npx bumpp --commit --tag --push"
   },
-  "peerDependencies": {},
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
-  "author": "yaquawa",
-  "module": "dist/eventdispatcher.esm.js",
   "devDependencies": {
-    "husky": "^4.2.5",
-    "ts-mixer": "^5.3.0",
-    "tsdx": "^0.13.2",
-    "tslib": "^2.0.0",
-    "typescript": "^3.9.7"
+    "@types/jest": "^26.0.22",
+    "jest": "^26.6.3",
+    "jest-esbuild": "^0.1.5",
+    "prettier": "^2.2.1",
+    "ts-mixer": "^5.4.0",
+    "ts-node": "^9.1.1",
+    "tsup": "^4.8.21",
+    "typescript": "^4.2.3"
   }
 }
