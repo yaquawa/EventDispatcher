@@ -6,7 +6,9 @@ const defaultEventInit = {
   properties: {},
 }
 
-export class Event {
+export type EventInterface = { readonly type: string }
+
+export class Event implements EventInterface {
   public readonly type: string
 
   constructor(type: string, options?: EventInit) {

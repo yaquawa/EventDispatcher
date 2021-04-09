@@ -1,20 +1,24 @@
-function isArray<T = any>(obj: any): obj is Array<T> {
+import { EventInterface } from './Event'
+
+export function isArray<T = any>(obj: any): obj is Array<T> {
   if (Array.isArray) {
-    return Array.isArray(obj);
+    return Array.isArray(obj)
   }
-  return Object.prototype.toString.call(obj) === '[object Array]';
+  return Object.prototype.toString.call(obj) === '[object Array]'
 }
 
-function isRegexp(obj: any): obj is RegExp {
-  return Object.prototype.toString.call(obj) === '[object RegExp]';
+export function isRegexp(obj: any): obj is RegExp {
+  return Object.prototype.toString.call(obj) === '[object RegExp]'
 }
 
-function isFunction<T = Function>(obj: any): obj is T {
-  return typeof obj === 'function';
+export function isFunction<T = Function>(obj: any): obj is T {
+  return typeof obj === 'function'
 }
 
-function isString(obj: any): obj is string {
-  return typeof obj === 'string';
+export function isString(obj: any): obj is string {
+  return typeof obj === 'string'
 }
 
-export { isArray, isRegexp, isFunction, isString };
+export function isEventObject(value: any): value is EventInterface {
+  return typeof value === 'object' && 'type' in value
+}

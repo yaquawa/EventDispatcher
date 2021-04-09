@@ -1,7 +1,7 @@
-import { Event } from './Event'
-import { isRegexp, isArray } from './TypeGuards'
+import { EventInterface, Event } from './Event'
+import { isRegexp, isArray, isEventObject } from './TypeGuards'
 
-type BaseEventsMap<E extends Event = Event> = {
+type BaseEventsMap<E extends EventInterface = EventInterface> = {
   [eventType: string]: (event: E) => any
 }
 
@@ -96,7 +96,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
   one<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): this {
     this.validateEventType(eventType)
 
-    const callback = (eventObject: Event) => {
+    const callback = (eventObject: EventInterface) => {
       this.off(eventType, callback as EventsMap[EventType])
       return fn.call(this.callbackContext || this, eventObject)
     }
@@ -110,20 +110,21 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
    * Trigger the given event(s).
    * The arguments passed to the callback function.
    */
-  trigger<EventObject extends Event>(
+  trigger<EventObject extends EventInterface>(
     eventObject: EventObject
   ): ReturnType<EventsMap[keyof EventsMap]>[] | null
   trigger<EventType extends Keys<EventsMap>>(
     eventType: EventType,
     args?: Record<string, any>
   ): ReturnType<EventsMap[EventType]>[] | null
-  trigger(eventTypeOrEventObject: Keys<EventsMap> | Event, args?: Record<string, any>): any {
-    const eventObject =
-      eventTypeOrEventObject instanceof Event
-        ? eventTypeOrEventObject
-        : new Event(eventTypeOrEventObject, { properties: args || {} })
-    const eventType =
-      eventTypeOrEventObject instanceof Event ? eventTypeOrEventObject.type : eventTypeOrEventObject
+  trigger(eventTypeOrEventObject: Keys<EventsMap> | EventInterface, args?: Record<string, any>): any {
+    const eventObject = isEventObject(eventTypeOrEventObject)
+      ? eventTypeOrEventObject
+      : new Event(eventTypeOrEventObject, { properties: args || {} })
+
+    const eventType = isEventObject(eventTypeOrEventObject)
+      ? eventTypeOrEventObject.type
+      : eventTypeOrEventObject
 
     this.validateEventType(eventType)
 
@@ -153,6 +154,15 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
    */
   enable(): this {
     this.disabled = false
+    return this
+  }
+
+  /**
+   * Clear all the registered callbacks.
+   */
+  clear(): this {
+    this.callbacks = {} as any
+
     return this
   }
 
