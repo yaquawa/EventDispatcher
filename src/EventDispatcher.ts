@@ -117,7 +117,11 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
   /**
    * Similar to `this.on` Define a one time event.
    */
-  one<EventType extends Keys<EventsMap>>(eventType: EventType, callback: EventsMap[EventType]): this {
+  one<EventType extends Keys<EventsMap>>(
+    eventType: EventType,
+    callback: EventsMap[EventType],
+    options?: { triggerLastEvent?: boolean }
+  ): this {
     this.validateEventType(eventType)
 
     const onetimeCallback = (eventObject: EventInterface) => {
@@ -125,7 +129,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
       return callback.call(this.callbackContext || this, eventObject)
     }
 
-    this.on(eventType, onetimeCallback as EventsMap[EventType])
+    this.on(eventType, onetimeCallback as EventsMap[EventType], options)
 
     return this
   }
