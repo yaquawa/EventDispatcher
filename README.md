@@ -30,7 +30,7 @@ import { EventDispatcher } from 'EventDispatcher';
 */
 
 const myEventTypes = ['click', 'move', 'touch'];
-const ed = new EventDispatcher(myEventTypes);
+const ed = new EventDispatcher({ validEventTypes: myEventTypes });
 
 
 
@@ -123,6 +123,18 @@ ed.off('foo')
 ed.trigger('foo')
 ```
 
+## Catch previous triggered event
+You can catch the previous already triggered event by passing a third option parameter to the `on` method.
+
+```js
+const mouseEvent = new MouseEvent('click')
+
+ed.trigger('click', mouseEvent)
+
+// The event handler will be called immediately. 
+ed.on('click', clickEventHandler, { triggerLastEvent: true })
+```
+
 
 ## Use it as a mixin
 You can mixin the APIs into another class by extending the API class.
@@ -173,7 +185,7 @@ class MouseEvent extends Event {
   }
 }
 
-const ed = new EventDispatcher<Events>(['click', 'touch']);
+const ed = new EventDispatcher<Events>({ validEventTypes: ['click', 'touch'] });
 
 ed.on('foo',() => {}) // error
 ed.off('foo',() => {}) // error

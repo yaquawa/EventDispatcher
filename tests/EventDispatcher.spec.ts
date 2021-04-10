@@ -1,5 +1,6 @@
 import { EventDispatcher, Event } from '../src'
 import { Mixin } from 'ts-mixer'
+import fn = jest.fn
 
 class MouseEvent extends Event {
   public timeStamp: number
@@ -20,7 +21,7 @@ interface Events {
 let ed: EventDispatcher<Events>
 
 beforeEach(() => {
-  ed = new EventDispatcher<Events>(['click', 'touch', 'sentResponse', 'getPostTitle'])
+  ed = new EventDispatcher<Events>({ validEventTypes: ['click', 'touch', 'sentResponse', 'getPostTitle'] })
 })
 
 test('register and trigger event', () => {
@@ -53,7 +54,7 @@ test('trigger method return response array', () => {
 
 test('register event with regular expression', () => {
   const callback = jest.fn()
-  const ed = new EventDispatcher([/click/])
+  const ed = new EventDispatcher({ validEventTypes: [/click/] })
 
   expect(() => {
     ed.on('clickFoo', callback)
@@ -140,6 +141,35 @@ test('set callback context', () => {
       expect(this).toEqual(context)
     })
     .trigger('click')
+})
+
+test('store and trigger last event object', () => {
+  const mouseEvent = new MouseEvent('click')
+  const clickEventHandler = jest.fn()
+
+  ed.trigger('click', mouseEvent)
+  expect(ed.getLastEventObjectOf('click')).toEqual(mouseEvent)
+
+  ed.on('click', clickEventHandler, { triggerLastEvent: true })
+  expect(clickEventHandler).toHaveBeenCalledTimes(1)
+  expect(clickEventHandler).toHaveBeenCalledWith(mouseEvent)
+
+  ed.removeLastEventObjectOf('click')
+  expect(ed.getLastEventObjectOf('click')).toEqual(null)
+})
+
+test('clear all callbacks', () => {
+  const callback = jest.fn()
+
+  ed.on('click', callback)
+  ed.on('touch', callback)
+
+  ed.clear()
+
+  ed.trigger('click')
+  ed.trigger('touch')
+
+  expect(callback).toHaveBeenCalledTimes(0)
 })
 
 test('mixin to another class', () => {
