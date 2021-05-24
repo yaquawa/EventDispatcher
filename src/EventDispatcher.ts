@@ -306,8 +306,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
         args?: Record<string, any>
       ): ReturnType<EventsMap[EventType]>[] | null
       trigger(eventTypeOrEventObject: any, args?: any): any {
-        ed.trigger(eventTypeOrEventObject, args)
-        return this
+        return ed.trigger(eventTypeOrEventObject, args)
       }
     }
   }
