@@ -21,7 +21,7 @@ type GetObjectValues<T extends Record<string, any>> = T[keyof T]
 type GetEventObjects<EventsMap extends Record<string, any>> = GetFirstParameter<GetObjectValues<EventsMap>>
 
 export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsMap> {
-  private readonly validEvents: (string | RegExp)[]
+  private readonly validEventTypes: (string | RegExp)[]
   private callbacks: { [EventType in keyof EventsMap]: Set<EventsMap[EventType]> } = {} as any
   private lastEvents: { [EventType in keyof EventsMap]: GetFirstParameter<EventsMap[EventType]> } = {} as any
   private disabled: boolean = false
@@ -34,7 +34,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
   constructor({ validEventTypes = [/.*/], triggerLastEvent = false }: Options = {}) {
     // If provided a array for validate event type set it up.
     // `event-type` could be either a string or regular expression
-    this.validEvents = validEventTypes
+    this.validEventTypes = validEventTypes
     this.triggerLastEvent = triggerLastEvent
     this.callbackContext = this
   }
@@ -238,7 +238,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
    */
   private validateEventType(eventType: string | string[]): void {
     if (!this.isValidEvent(eventType)) {
-      const validEvents = this.validEvents.join('|')
+      const validEvents = this.validEventTypes.join('|')
       throw new Error(`Invalid Event Type: '${eventType}'.\nEvent type should be any of: ${validEvents}.`)
     }
   }
@@ -254,7 +254,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
     const eventTypes = asArray(eventType)
 
     for (let eventType of eventTypes) {
-      for (let validEvent of this.validEvents) {
+      for (let validEvent of this.validEventTypes) {
         let isValid
         if (isRegexp(validEvent)) {
           isValid = validEvent.test(eventType)
@@ -274,13 +274,16 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
   }
 
   Api() {
-    const ed = this
+    const { validEventTypes, triggerLastEvent } = this
+    const createInstance = () => {
+      return new EventDispatcher<EventsMap>({ validEventTypes, triggerLastEvent })
+    }
 
     return class {
       eventDispatcher: EventDispatcher<EventsMap>
 
       constructor() {
-        this.eventDispatcher = ed
+        this.eventDispatcher = createInstance()
       }
 
       on<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): this {
@@ -289,12 +292,12 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
       }
 
       off<EventType extends Keys<EventsMap>>(eventType: EventType, fn?: EventsMap[EventType]): this {
-        ed.off(eventType, fn)
+        this.eventDispatcher.off(eventType, fn)
         return this
       }
 
       one<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): this {
-        ed.one(eventType, fn)
+        this.eventDispatcher.one(eventType, fn)
         return this
       }
 
@@ -306,7 +309,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
         args?: Record<string, any>
       ): ReturnType<EventsMap[EventType]>[] | null
       trigger(eventTypeOrEventObject: any, args?: any): any {
-        return ed.trigger(eventTypeOrEventObject, args)
+        return this.eventDispatcher.trigger(eventTypeOrEventObject, args)
       }
     }
   }
