@@ -123,6 +123,16 @@ ed.off('foo')
 ed.trigger('foo')
 ```
 
+## "unbind" event handler
+There is a special way to remove event listener, which can be used in some special design patterns.
+
+```js
+const eventHandler = () => {}
+const off = ed.on('foo', eventHandler)
+
+off() // equivalent to `ed.off('foo', eventHandler)`
+```
+
 ## Catch previous triggered event
 You can catch the previous already triggered event by passing a third option parameter to the `on` method.
 

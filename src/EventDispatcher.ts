@@ -7,10 +7,7 @@ type BaseEventsMap<E extends EventInterface = EventInterface> = {
 
 type Keys<T> = Extract<keyof T, string>
 
-function asArray(value: any): any[] {
-  return isArray(value) ? value : [value]
-}
-
+type OffEvent = () => void
 type Options = {
   validEventTypes?: (string | RegExp)[]
   triggerLastEvent?: boolean
@@ -64,7 +61,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
     eventType: EventType,
     callback: EventsMap[EventType],
     options?: { triggerLastEvent?: boolean }
-  ): this {
+  ): OffEvent {
     this.validateEventType(eventType)
 
     const triggerLastEvent = options?.triggerLastEvent || this.triggerLastEvent
@@ -81,7 +78,11 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
       lastEventObject && callback.call(this.callbackContext || this, lastEventObject)
     }
 
-    return this
+    const off = () => {
+      this.off(eventType, callback)
+    }
+
+    return off
   }
 
   /**
@@ -121,7 +122,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
     eventType: EventType,
     callback: EventsMap[EventType],
     options?: { triggerLastEvent?: boolean }
-  ): this {
+  ): OffEvent {
     this.validateEventType(eventType)
 
     const onetimeCallback = (eventObject: EventInterface) => {
@@ -129,9 +130,7 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
       return callback.call(this.callbackContext || this, eventObject)
     }
 
-    this.on(eventType, onetimeCallback as EventsMap[EventType], options)
-
-    return this
+    return this.on(eventType, onetimeCallback as EventsMap[EventType], options)
   }
 
   /**
@@ -286,9 +285,8 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
         this.eventDispatcher = createInstance()
       }
 
-      on<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): this {
-        this.eventDispatcher.on(eventType, fn)
-        return this
+      on<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): OffEvent {
+        return this.eventDispatcher.on(eventType, fn)
       }
 
       off<EventType extends Keys<EventsMap>>(eventType: EventType, fn?: EventsMap[EventType]): this {
@@ -296,9 +294,8 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
         return this
       }
 
-      one<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): this {
-        this.eventDispatcher.one(eventType, fn)
-        return this
+      one<EventType extends Keys<EventsMap>>(eventType: EventType, fn: EventsMap[EventType]): OffEvent {
+        return this.eventDispatcher.one(eventType, fn)
       }
 
       trigger<EventObject extends Event>(
@@ -313,4 +310,8 @@ export class EventDispatcher<EventsMap extends Record<string, any> = BaseEventsM
       }
     }
   }
+}
+
+function asArray(value: any): any[] {
+  return isArray(value) ? value : [value]
 }

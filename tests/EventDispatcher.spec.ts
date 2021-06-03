@@ -28,7 +28,9 @@ test('register and trigger event', () => {
   const args = { arg1: 'foo', arg2: 'bar' }
   const callback = jest.fn()
 
-  ed.on('click', callback).on('touch', callback).one('touch', callback)
+  ed.on('click', callback)
+  ed.on('touch', callback)
+  ed.one('touch', callback)
 
   ed.trigger('click', args)
   expect(callback).nthCalledWith(1, { type: 'click', ...args })
@@ -43,7 +45,8 @@ test('register and trigger event', () => {
 test('trigger method return response array', () => {
   ed.on('touch', () => {
     return true
-  }).on('touch', () => {
+  })
+  ed.on('touch', () => {
     return false
   })
 
@@ -80,18 +83,31 @@ describe('remove the callbacks', () => {
   test('with callback specified', () => {
     const callback1 = jest.fn()
     const callback2 = jest.fn()
+    const callback3 = jest.fn()
 
-    ed.on('click', callback1).on('click', callback2).off('click', callback1).trigger('click')
+    ed.on('click', callback1)
+    const off = ed.on('click', callback2)
+    ed.on('click', callback3)
+
+    ed.off('click', callback1)
+    off()
+
+    ed.trigger('click')
 
     expect(callback1).not.toBeCalled()
-    expect(callback2).toBeCalled()
+    expect(callback2).not.toBeCalled()
+    expect(callback3).toBeCalled()
   })
 
   test('with callback not specified, removes all the callbacks of the given event type', () => {
     const callback1 = jest.fn()
     const callback2 = jest.fn()
 
-    ed.on('click', callback1).on('click', callback2).off('click').trigger('click')
+    ed.on('click', callback1)
+    ed.on('click', callback2)
+    ed.off('click')
+
+    ed.trigger('click')
 
     expect(callback1).not.toBeCalled()
     expect(callback2).not.toBeCalled()
@@ -121,7 +137,8 @@ test('throws if the event type is not valid', () => {
 test('disable or enable the event dispatcher', () => {
   const callback = jest.fn()
 
-  ed.on('click', callback).disable().trigger('click')
+  ed.on('click', callback)
+  ed.disable().trigger('click')
 
   expect(callback).not.toBeCalled()
 
@@ -134,13 +151,13 @@ test('set callback context', () => {
 
   ed.one('click', function (this: any) {
     expect(this).toEqual(ed)
-  }).trigger('click')
+  })
+  ed.trigger('click')
 
-  ed.setCallbackContext(context)
-    .one('click', function (this: any) {
-      expect(this).toEqual(context)
-    })
-    .trigger('click')
+  ed.setCallbackContext(context).one('click', function (this: any) {
+    expect(this).toEqual(context)
+  })
+  ed.trigger('click')
 })
 
 test('store and trigger last event object', () => {
